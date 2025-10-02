@@ -1,0 +1,367 @@
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  padding: 20px;
+}
+
+.login-card {
+  background: white;
+  border-radius: 24px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  padding: 48px;
+  width: auto;
+  max-width: 420px;
+  min-width: 380px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* PC 레이아웃 - 가운데 정렬 단일 카드 */
+@media (min-width: 1024px) {
+  .login-container {
+    background: #f8fafc;
+    padding: 40px;
+  }
+  
+  .login-card {
+    max-width: 420px;
+    min-width: 380px;
+    width: auto;
+    padding: 48px;
+    border-radius: 24px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 10px 15px rgba(0, 0, 0, 0.1);
+  }
+  
+  .login-header h2 {
+    font-size: 32px;
+    margin-bottom: 12px;
+  }
+  
+  .login-header p {
+    font-size: 16px;
+  }
+  
+  .input-group {
+    margin-bottom: 24px;
+  }
+  
+  .input-group input {
+    padding: 16px 20px;
+    font-size: 16px;
+  }
+  
+  .login-button {
+    padding: 16px;
+    font-size: 16px;
+    margin-top: 12px;
+  }
+  
+  .google-login-button {
+    padding: 16px;
+    font-size: 16px;
+  }
+  
+  .divider {
+    margin: 32px 0;
+  }
+}
+
+/* 그라데이션 제거 - 깔끔한 디자인 */
+
+.login-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.login-header h2 {
+  color: #1a202c;
+  font-size: 32px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  letter-spacing: -0.025em;
+}
+
+.login-header p {
+  color: #64748b;
+  font-size: 16px;
+  margin: 0;
+  font-weight: 400;
+}
+
+.login-form {
+  margin-bottom: 24px;
+}
+
+.input-group {
+  margin-bottom: 24px;
+}
+
+.input-group label {
+  display: block;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 16px 20px;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  background: #fafafa;
+  color: #111827;
+}
+
+.input-group input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.input-group input::placeholder {
+  color: #9ca3af;
+}
+
+.login-button {
+  width: 100%;
+  background: #111827;
+  color: white;
+  border: none;
+  padding: 16px 24px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+}
+
+.login-button:hover:not(:disabled) {
+  background: #1f2937;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.login-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.divider {
+  text-align: center;
+  margin: 32px 0;
+  position: relative;
+}
+
+.divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #e5e7eb;
+}
+
+.divider span {
+  background: white;
+  color: #6b7280;
+  padding: 0 20px;
+  font-size: 14px;
+  position: relative;
+  font-weight: 500;
+}
+
+.google-login-button {
+  width: 100%;
+  background: white;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 16px 24px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.google-login-button:hover:not(:disabled) {
+  border-color: #9ca3af;
+  background: #f9fafb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.google-login-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.google-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.login-footer {
+  text-align: center;
+  margin-top: 32px;
+}
+
+.login-footer p {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0;
+}
+
+.login-footer a {
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.login-footer a:hover {
+  text-decoration: underline;
+  color: #2563eb;
+}
+
+/* 태블릿 레이아웃 */
+@media (max-width: 1023px) and (min-width: 768px) {
+  .login-container {
+    padding: 30px;
+    background: #f8fafc;
+  }
+  
+  .login-card {
+    max-width: 400px;
+    min-width: 360px;
+    width: auto;
+    padding: 40px;
+    border-radius: 20px;
+  }
+  
+  .login-header h2 {
+    font-size: 28px;
+  }
+  
+  .login-header p {
+    font-size: 15px;
+  }
+  
+  .input-group input {
+    padding: 15px 18px;
+    font-size: 16px;
+  }
+  
+  .login-button,
+  .google-login-button {
+    padding: 15px;
+    font-size: 15px;
+  }
+}
+
+/* 모바일 레이아웃 */
+@media (max-width: 767px) {
+  .login-container {
+    padding: 20px;
+    background: #f8fafc;
+  }
+  
+  .login-card {
+    padding: 32px 24px;
+    border-radius: 20px;
+    max-width: 100%;
+    width: 100%;
+    margin: 0;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 10px 15px rgba(0, 0, 0, 0.1);
+  }
+  
+  .login-header h2 {
+    font-size: 26px;
+    margin-bottom: 10px;
+  }
+  
+  .login-header p {
+    font-size: 14px;
+    margin-bottom: 30px;
+  }
+  
+  .input-group {
+    margin-bottom: 22px;
+  }
+  
+  .input-group input {
+    padding: 15px;
+    font-size: 16px; /* iOS 줌 방지 */
+  }
+  
+  .login-button {
+    padding: 15px;
+    font-size: 15px;
+    margin-top: 10px;
+  }
+  
+  .google-login-button {
+    padding: 15px;
+    font-size: 15px;
+  }
+  
+  .divider {
+    margin: 28px 0;
+  }
+  
+  .login-footer {
+    margin-top: 28px;
+  }
+}
+
+/* 매우 작은 화면 */
+@media (max-width: 480px) {
+  .login-container {
+    padding: 16px;
+    background: #f8fafc;
+  }
+  
+  .login-card {
+    padding: 28px 20px;
+    border-radius: 16px;
+    width: 100%;
+  }
+  
+  .login-header h2 {
+    font-size: 24px;
+  }
+  
+  .login-header p {
+    font-size: 13px;
+  }
+  
+  .input-group input {
+    padding: 14px;
+    font-size: 16px;
+  }
+  
+  .login-button,
+  .google-login-button {
+    padding: 14px;
+    font-size: 14px;
+  }
+  
+  .divider {
+    margin: 25px 0;
+  }
+}

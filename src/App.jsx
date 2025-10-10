@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginForm from './components/LoginForm';
 import Dashboard from './components/Dashboard';
+import Callback from './components/Callback';
 import './App.css';
 
 function AppContent() {
@@ -32,6 +33,10 @@ function AppContent() {
             user ? <Dashboard /> : 
             <Navigate to="/login" replace />
           } 
+        />
+        <Route 
+          path="/callback" 
+          element={<Callback />} 
         />
         <Route 
           path="/" 

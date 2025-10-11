@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { handleOAuth2Callback } from '../utils/googleAuth';
 import { useAuth } from '../contexts/AuthContext';
 import './Callback.css';
 
@@ -13,71 +14,31 @@ const Callback = () => {
     const processCallback = async () => {
       try {
         setStatus('processing');
+        const result = await handleOAuth2Callback();
         
-        // URL에서 authorization code와 state 추출
-        const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
-        const state = urlParams.get('state');
-        const error = urlParams.get('error');
-        
-        if (error) {
-          throw new Error(`구글 로그인 실패: ${error}`);
+        if (result.success) {
+          // 토큰에서 사용자 정보 추출 (JWT 토큰 디코딩)
+          const token = result.tokenData.access_token;
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          
+          // 사용자 정보로 로그인 처리
+          await login({
+            id: payload.sub || payload.id,
+            name: payload.name || '사용자',
+            email: payload.email || '',
+            avatar: payload.picture || '',
+            loginMethod: 'OAuth2',
+            provider: 'oauth2'
+          });
+          
+          setStatus('success');
+          setTimeout(() => {
+            navigate('/dashboard');
+          }, 2000);
+        } else {
+          setError(result.error);
+          setStatus('error');
         }
-        
-        if (!code) {
-          throw new Error('Authorization code가 없습니다.');
-        }
-        
-        // CSRF 보호를 위한 state 검증
-        const savedState = sessionStorage.getItem('google_oauth_state');
-        if (!state || state !== savedState) {
-          throw new Error('잘못된 state 값입니다. CSRF 공격 가능성이 있습니다.');
-        }
-        
-        // state 검증 후 제거
-        sessionStorage.removeItem('google_oauth_state');
-        
-        // Authorization Server로 POST /api/auth/external-login 호출
-        const response = await fetch('/api/auth/external-login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            code: code,
-            state: state,
-            provider: 'google'
-          })
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-        }
-        
-        const { user, access_token, refresh_token } = await response.json();
-        
-        // JWT 토큰 저장 및 사용자 정보 설정
-        await login({
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          avatar: user.avatar || '',
-          loginMethod: 'OAuth2',
-          provider: 'google'
-        });
-        
-        // 토큰을 localStorage에 저장
-        localStorage.setItem('access_token', access_token);
-        if (refresh_token) {
-          localStorage.setItem('refresh_token', refresh_token);
-        }
-        
-        setStatus('success');
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 2000);
-        
       } catch (err) {
         console.error('콜백 처리 중 오류:', err);
         setError(err.message);

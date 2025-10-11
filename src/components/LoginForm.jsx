@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { initiateGoogleLogin } from '../utils/googleAuth';
 import './LoginForm.css';
 
 const LoginForm = () => {
@@ -33,31 +34,7 @@ const LoginForm = () => {
   };
 
   const handleGoogleLogin = () => {
-    // 구글 OAuth2 로그인 URL 생성
-    const clientId = 'YOUR_GOOGLE_CLIENT_ID'; // 실제 구글 클라이언트 ID로 교체 필요
-    const redirectUri = `${window.location.origin}/callback`;
-    const scope = 'openid profile email';
-    const responseType = 'code';
-    const state = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    
-    // state를 sessionStorage에 저장 (CSRF 보호)
-    sessionStorage.setItem('google_oauth_state', state);
-    
-    // 구글 OAuth2 URL 생성
-    const params = new URLSearchParams({
-      client_id: clientId,
-      response_type: responseType,
-      redirect_uri: redirectUri,
-      scope: scope,
-      state: state,
-      access_type: 'offline',
-      prompt: 'consent'
-    });
-    
-    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-    
-    // 구글 로그인 페이지로 리다이렉트
-    window.location.href = googleAuthUrl;
+    initiateGoogleLogin();
   };
 
   return (

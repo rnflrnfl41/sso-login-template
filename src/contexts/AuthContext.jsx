@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { getAccessToken, isTokenExpired, refreshAccessToken } from '../utils/googleAuth';
+import { getAccessToken, isTokenExpired, refreshAccessToken, revokeToken } from '../utils/oauth2Auth';
 
 const AuthContext = createContext();
 
@@ -53,32 +53,12 @@ export const AuthProvider = ({ children }) => {
     checkAuthStatus();
   }, []);
 
-  const login = async (credentials) => {
+  // OAuth2 로그인은 initiateOAuth2Login()으로 처리되므로 별도 login 함수 불필요
+  const login = async (userData) => {
     setIsLoading(true);
-    
     try {
-      // 서버에 로그인 요청
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(credentials)
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const { user, access_token, refresh_token } = await response.json();
-      
-      // 서버에서 받은 정보 저장
-      setUser(user);
-      localStorage.setItem('user', JSON.stringify(user));
-      localStorage.setItem('access_token', access_token);
-      if (refresh_token) {
-        localStorage.setItem('refresh_token', refresh_token);
-      }
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -89,25 +69,15 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      // 서버에 로그아웃 요청 (선택사항)
-      const token = getAccessToken();
-      if (token) {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          }
-        });
-      }
+      // OAuth2 토큰 취소
+      await revokeToken();
     } catch (error) {
-      console.error('Logout request failed:', error);
-      // 서버 요청이 실패해도 클라이언트에서는 로그아웃 처리
+      console.error('Token revocation failed:', error);
+      // 토큰 취소 실패해도 클라이언트에서는 로그아웃 처리
     } finally {
       // 클라이언트 상태 정리
       setUser(null);
       localStorage.removeItem('user');
-      window.oauth2Tokens = null; // 메모리 토큰 정리
     }
   };
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { handleOAuth2Callback } from '../utils/googleAuth';
+import { handleOAuth2Callback, getUserInfo } from '../utils/oauth2Auth';
 import { useAuth } from '../contexts/AuthContext';
 import './Callback.css';
 
@@ -17,16 +17,15 @@ const Callback = () => {
         const result = await handleOAuth2Callback();
         
         if (result.success) {
-          // 토큰에서 사용자 정보 추출 (JWT 토큰 디코딩)
-          const token = result.tokenData.access_token;
-          const payload = JSON.parse(atob(token.split('.')[1]));
+          // 서버에서 사용자 정보 가져오기 (OAuth2 UserInfo 엔드포인트)
+          const userInfo = await getUserInfo();
           
           // 사용자 정보로 로그인 처리
           await login({
-            id: payload.sub || payload.id,
-            name: payload.name || '사용자',
-            email: payload.email || '',
-            avatar: payload.picture || '',
+            id: userInfo.sub || userInfo.id,
+            name: userInfo.name || userInfo.preferred_username || '사용자',
+            email: userInfo.email || '',
+            avatar: userInfo.picture || userInfo.avatar || '',
             loginMethod: 'OAuth2',
             provider: 'oauth2'
           });

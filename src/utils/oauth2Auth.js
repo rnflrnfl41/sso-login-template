@@ -1,34 +1,4 @@
-// Base64URL 인코딩 헬퍼 함수
-const base64UrlEncode = (array) => {
-  return btoa(String.fromCharCode.apply(null, array))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
-};
 
-// PKCE용 code_verifier 생성
-const generateCodeVerifier = () => {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return base64UrlEncode(array);
-};
-
-// PKCE용 code_challenge 생성
-const generateCodeChallenge = async (codeVerifier) => {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(codeVerifier);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return btoa(String.fromCharCode.apply(null, new Uint8Array(digest)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
-};
-
-const generateState = () => {
-  const array = new Uint8Array(16);
-  crypto.getRandomValues(array);
-  return base64UrlEncode(array);
-};
 
 // OAuth2 Authorization Server로 리다이렉트 (PKCE 포함)
 export const initiateOAuth2Login = async () => {
@@ -84,7 +54,9 @@ export const exchangeCodeForToken = async (code) => {
     });
     
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.error_description || errorData.error || `HTTP error! status: ${response.status}`;
+      throw new Error(errorMessage);
     }
     
     const tokenData = await response.json();
@@ -129,7 +101,9 @@ export const refreshAccessToken = async () => {
     });
     
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.error_description || errorData.error || `HTTP error! status: ${response.status}`;
+      throw new Error(errorMessage);
     }
     
     const tokenData = await response.json();
@@ -186,6 +160,85 @@ export const extractOAuthParams = () => {
   return { code, error };
 };
 
+// OAuth2 로그아웃 (RFC 7009 - Token Revocation)
+export const revokeToken = async () => {
+  try {
+    const tokens = window.oauth2Tokens;
+    if (!tokens) {
+      return { success: true }; // 이미 로그아웃된 상태
+    }
+    
+    // Access Token 취소
+    if (tokens.access_token) {
+      await fetch('http://localhost:9090/oauth2/revoke', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': 'Basic ' + btoa('frontend-client:frontend-secret')
+        },
+        body: new URLSearchParams({
+          token: tokens.access_token,
+          token_type_hint: 'access_token'
+        })
+      });
+    }
+    
+    // Refresh Token 취소
+    if (tokens.refresh_token) {
+      await fetch('http://localhost:9090/oauth2/revoke', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': 'Basic ' + btoa('frontend-client:frontend-secret')
+        },
+        body: new URLSearchParams({
+          token: tokens.refresh_token,
+          token_type_hint: 'refresh_token'
+        })
+      });
+    }
+    
+    // 로컬 토큰 정리
+    window.oauth2Tokens = null;
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Token revocation failed:', error);
+    // 토큰 취소 실패해도 로컬에서는 정리
+    window.oauth2Tokens = null;
+    return { success: false, error: error.message };
+  }
+};
+
+// 사용자 정보 가져오기 (OAuth2 UserInfo 엔드포인트)
+export const getUserInfo = async () => {
+  try {
+    const token = getAccessToken();
+    if (!token) {
+      throw new Error('No access token available');
+    }
+    
+    const response = await fetch('http://localhost:9090/oauth2/userinfo', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.error_description || errorData.error || `HTTP error! status: ${response.status}`;
+      throw new Error(errorMessage);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Get user info failed:', error);
+    throw error;
+  }
+};
+
 // 콜백 페이지에서 사용할 핸들러
 export const handleOAuth2Callback = async () => {
   const { code, error } = extractOAuthParams();
@@ -207,4 +260,36 @@ export const handleOAuth2Callback = async () => {
   }
   
   return { success: false, error: 'No code or error found' };
+};
+
+// Base64URL 인코딩 헬퍼 함수
+const base64UrlEncode = (array) => {
+  return btoa(String.fromCharCode.apply(null, array))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+};
+
+// PKCE용 code_verifier 생성
+const generateCodeVerifier = () => {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return base64UrlEncode(array);
+};
+
+// PKCE용 code_challenge 생성
+const generateCodeChallenge = async (codeVerifier) => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(codeVerifier);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode.apply(null, new Uint8Array(digest)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+};
+
+const generateState = () => {
+  const array = new Uint8Array(16);
+  crypto.getRandomValues(array);
+  return base64UrlEncode(array);
 };

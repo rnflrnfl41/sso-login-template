@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { getAccessToken, isTokenExpired, refreshAccessToken, revokeToken } from '../utils/oauth2Auth';
+import { getCurrentUser, checkAuthStatus, revokeToken } from '../utils/oauth2Auth';
 
 const AuthContext = createContext();
 
@@ -16,41 +16,35 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // 페이지 로드 시 메모리 토큰 확인
-    const checkAuthStatus = async () => {
-      const token = getAccessToken();
-      const savedUser = localStorage.getItem('user');
-      
-      if (token && savedUser) {
-        try {
-          // 토큰 만료 확인
-          if (isTokenExpired()) {
-            // 만료된 경우 refresh 시도
-            try {
-              await refreshAccessToken();
-              setUser(JSON.parse(savedUser));
-            } catch (refreshError) {
-              console.error('Token refresh failed:', refreshError);
-              // refresh 실패 시 로그아웃 처리
-              localStorage.removeItem('user');
-              window.oauth2Tokens = null;
-            }
-          } else {
-            // 토큰이 유효하면 사용자 정보 설정
-            setUser(JSON.parse(savedUser));
+    // 페이지 로드 시 BFF에서 인증 상태 확인
+    const checkAuthStatusOnLoad = async () => {
+      try {
+        // BFF에서 로그인 상태 확인
+        const isAuthenticated = await checkAuthStatus();
+        
+        if (isAuthenticated) {
+          // BFF에서 사용자 정보 가져오기
+          const userData = await getCurrentUser();
+          if (userData) {
+            setUser(userData);
+            localStorage.setItem('user', JSON.stringify(userData));
           }
-        } catch (error) {
-          console.error('Auth check failed:', error);
-          // 오류 시 정리
+        } else {
+          // 인증되지 않은 경우 로컬 상태 정리
+          setUser(null);
           localStorage.removeItem('user');
-          window.oauth2Tokens = null;
         }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        // 오류 시 정리
+        setUser(null);
+        localStorage.removeItem('user');
+      } finally {
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     };
     
-    checkAuthStatus();
+    checkAuthStatusOnLoad();
   }, []);
 
   // OAuth2 로그인은 initiateOAuth2Login()으로 처리되므로 별도 login 함수 불필요
@@ -81,34 +75,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // API 요청 시 자동으로 토큰 포함
+  // API 요청 시 BFF를 통해 처리 (쿠키로 세션 관리)
   const apiRequest = async (url, options = {}) => {
-    const token = getAccessToken();
-    
-    if (!token) {
-      throw new Error('No access token available');
-    }
-    
-    // 토큰 만료 확인 및 자동 갱신
-    if (isTokenExpired()) {
-      try {
-        await refreshAccessToken();
-      } catch (error) {
-        // refresh 실패 시 로그아웃
-        logout();
-        throw new Error('Token refresh failed');
-      }
-    }
-    
+    // BFF를 통한 API 요청은 쿠키로 세션 관리
     const headers = {
-      'Authorization': `Bearer ${getAccessToken()}`,
       'Content-Type': 'application/json',
       ...options.headers
     };
     
     return fetch(url, {
       ...options,
-      headers
+      headers,
+      credentials: 'include' // 쿠키로 세션 관리
     });
   };
 

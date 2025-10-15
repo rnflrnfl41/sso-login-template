@@ -1,266 +1,4 @@
-
-
-// OAuth2 Authorization Server로 리다이렉트 (PKCE 포함)
-export const initiateOAuth2Login = async () => {
-  const clientId = 'frontend-client';
-  const redirectUri = `${window.location.origin}/callback`;
-  const scope = 'openid profile email';
-  const responseType = 'code';
-  const state = generateState();
-  
-  // PKCE 파라미터 생성
-  const codeVerifier = generateCodeVerifier();
-  const codeChallenge = await generateCodeChallenge(codeVerifier);
-  
-  // code_verifier를 세션 스토리지에 저장 (콜백에서 사용)
-  sessionStorage.setItem('oauth2_code_verifier', codeVerifier);
-  
-  // OAuth2 Authorization Server 엔드포인트로 리다이렉트
-  const params = new URLSearchParams({
-    client_id: clientId,
-    response_type: responseType,
-    redirect_uri: redirectUri,
-    scope: scope,
-    code_challenge: codeChallenge,
-    code_challenge_method: 'S256',
-    state: state // CSRF 보호
-  });
-  
-  const authUrl = `http://localhost:9090/oauth2/authorize?${params.toString()}`;
-  window.location.href = authUrl;
-};
-
-// Authorization Code를 JWT 토큰으로 교환 (PKCE 포함)
-export const exchangeCodeForToken = async (code) => {
-  try {
-    // 세션 스토리지에서 code_verifier 가져오기
-    const codeVerifier = sessionStorage.getItem('oauth2_code_verifier');
-    if (!codeVerifier) {
-      throw new Error('Code verifier not found');
-    }
-    
-    const response = await fetch('http://localhost:9090/oauth2/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': 'Basic ' + btoa('frontend-client:frontend-secret')
-      },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code: code,
-        redirect_uri: `${window.location.origin}/callback`,
-        code_verifier: codeVerifier // PKCE 파라미터 추가
-      })
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.error_description || errorData.error || `HTTP error! status: ${response.status}`;
-      throw new Error(errorMessage);
-    }
-    
-    const tokenData = await response.json();
-    
-    // code_verifier 사용 후 제거
-    sessionStorage.removeItem('oauth2_code_verifier');
-    
-    // 토큰을 메모리에 저장 (권장 방식)
-    // localStorage 대신 메모리 변수에 저장
-    window.oauth2Tokens = {
-      access_token: tokenData.access_token,
-      refresh_token: tokenData.refresh_token,
-      expires_in: tokenData.expires_in,
-      token_type: tokenData.token_type || 'Bearer'
-    };
-    
-    return tokenData;
-  } catch (error) {
-    console.error('Token exchange failed:', error);
-    throw error;
-  }
-};
-
-// Refresh Token으로 새로운 Access Token 발급
-export const refreshAccessToken = async () => {
-  try {
-    const tokens = window.oauth2Tokens;
-    if (!tokens || !tokens.refresh_token) {
-      throw new Error('No refresh token available');
-    }
-    
-    const response = await fetch('http://localhost:9090/oauth2/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': 'Basic ' + btoa('frontend-client:frontend-secret')
-      },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: tokens.refresh_token
-      })
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.error_description || errorData.error || `HTTP error! status: ${response.status}`;
-      throw new Error(errorMessage);
-    }
-    
-    const tokenData = await response.json();
-    
-    // 새로운 토큰으로 업데이트
-    window.oauth2Tokens = {
-      access_token: tokenData.access_token,
-      refresh_token: tokenData.refresh_token || tokens.refresh_token, // 새로운 refresh_token이 없으면 기존 것 유지
-      expires_in: tokenData.expires_in,
-      token_type: tokenData.token_type || 'Bearer'
-    };
-    
-    return tokenData;
-  } catch (error) {
-    console.error('Token refresh failed:', error);
-    // refresh 실패 시 토큰 정리
-    window.oauth2Tokens = null;
-    throw error;
-  }
-};
-
-// 현재 Access Token 가져오기
-export const getAccessToken = () => {
-  return window.oauth2Tokens?.access_token || null;
-};
-
-// 토큰이 만료되었는지 확인
-export const isTokenExpired = () => {
-  const tokens = window.oauth2Tokens;
-  if (!tokens) return true;
-  
-  // 토큰 만료 시간 확인 (JWT 토큰의 경우)
-  try {
-    const payload = JSON.parse(atob(tokens.access_token.split('.')[1]));
-    const now = Math.floor(Date.now() / 1000);
-    return payload.exp < now;
-  } catch (error) {
-    // JWT가 아닌 경우 expires_in으로 확인
-    return false; // 서버에서 만료 시간 관리
-  }
-};
-
-// OAuth2 로그인 버튼 클릭 핸들러 (기존 함수명 유지)
-export const initiateGoogleLogin = async () => {
-  await initiateOAuth2Login();
-};
-
-// URL에서 OAuth 코드와 에러 추출
-export const extractOAuthParams = () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const code = urlParams.get('code');
-  const error = urlParams.get('error');
-  
-  return { code, error };
-};
-
-// OAuth2 로그아웃 (RFC 7009 - Token Revocation)
-export const revokeToken = async () => {
-  try {
-    const tokens = window.oauth2Tokens;
-    if (!tokens) {
-      return { success: true }; // 이미 로그아웃된 상태
-    }
-    
-    // Access Token 취소
-    if (tokens.access_token) {
-      await fetch('http://localhost:9090/oauth2/revoke', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': 'Basic ' + btoa('frontend-client:frontend-secret')
-        },
-        body: new URLSearchParams({
-          token: tokens.access_token,
-          token_type_hint: 'access_token'
-        })
-      });
-    }
-    
-    // Refresh Token 취소
-    if (tokens.refresh_token) {
-      await fetch('http://localhost:9090/oauth2/revoke', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': 'Basic ' + btoa('frontend-client:frontend-secret')
-        },
-        body: new URLSearchParams({
-          token: tokens.refresh_token,
-          token_type_hint: 'refresh_token'
-        })
-      });
-    }
-    
-    // 로컬 토큰 정리
-    window.oauth2Tokens = null;
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Token revocation failed:', error);
-    // 토큰 취소 실패해도 로컬에서는 정리
-    window.oauth2Tokens = null;
-    return { success: false, error: error.message };
-  }
-};
-
-// 사용자 정보 가져오기 (OAuth2 UserInfo 엔드포인트)
-export const getUserInfo = async () => {
-  try {
-    const token = getAccessToken();
-    if (!token) {
-      throw new Error('No access token available');
-    }
-    
-    const response = await fetch('http://localhost:9090/oauth2/userinfo', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.error_description || errorData.error || `HTTP error! status: ${response.status}`;
-      throw new Error(errorMessage);
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Get user info failed:', error);
-    throw error;
-  }
-};
-
-// 콜백 페이지에서 사용할 핸들러
-export const handleOAuth2Callback = async () => {
-  const { code, error } = extractOAuthParams();
-  
-  if (code) {
-    try {
-      // Authorization Code를 받았으므로 JWT 토큰 요청
-      const tokenData = await exchangeCodeForToken(code);
-      console.log('로그인 성공:', tokenData);
-      return { success: true, tokenData };
-    } catch (error) {
-      console.error('토큰 교환 실패:', error);
-      return { success: false, error: error.message };
-    }
-  } else if (error) {
-    // 로그인 실패 처리
-    console.error('OAuth2 로그인 실패:', error);
-    return { success: false, error: error };
-  }
-  
-  return { success: false, error: 'No code or error found' };
-};
+// OAuth2 토큰 관리 유틸리티
 
 // Base64URL 인코딩 헬퍼 함수
 const base64UrlEncode = (array) => {
@@ -292,4 +30,128 @@ const generateState = () => {
   const array = new Uint8Array(16);
   crypto.getRandomValues(array);
   return base64UrlEncode(array);
+};
+
+// BFF 서버의 /login 엔드포인트로 리다이렉트
+export const initiateOAuth2Login = async () => {
+  // BFF 서버가 OAuth2 Authorization Server와의 모든 상호작용을 처리
+  // SPA는 단순히 BFF의 로그인 엔드포인트로 리다이렉트
+  const bffLoginUrl = 'http://localhost:9091/api/auth/login';
+  window.location.href = bffLoginUrl;
+};
+
+// BFF에서 사용자 정보 가져오기 (세션 확인)
+export const getCurrentUser = async () => {
+  try {
+    const response = await fetch('http://localhost:9091/api/user/me', {
+      method: 'GET',
+      credentials: 'include', // 쿠키로 세션 관리
+      mode: 'cors', // CORS 모드 명시적 설정
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        // 인증되지 않은 경우
+        console.log('사용자가 인증되지 않음 (401)');
+        return null;
+      }
+      
+      if (response.status === 500) {
+        console.error('BFF 서버 내부 오류 (500)');
+        throw new Error('BFF 서버 내부 오류가 발생했습니다. OAuth2 설정을 확인해주세요.');
+      }
+      
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.message || errorData.error || `HTTP error! status: ${response.status}`;
+      console.error('사용자 정보 요청 실패:', errorMessage);
+      throw new Error(errorMessage);
+    }
+    
+    const userData = await response.json();
+    console.log('사용자 정보 가져오기 성공:', userData);
+    
+    // 서버에서 user 객체를 직접 반환하는 경우와 래핑된 응답을 모두 처리
+    if (userData.user) {
+      return userData.user; // { user: {...} } 형태인 경우
+    } else if (userData.sub || userData.id) {
+      return userData; // 사용자 정보가 직접 반환된 경우
+    } else {
+      console.warn('예상치 못한 사용자 데이터 형식:', userData);
+      return userData;
+    }
+  } catch (error) {
+    console.error('사용자 정보 가져오기 실패:', error);
+    
+    // CORS 에러인 경우 특별한 처리
+    if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+      throw new Error('BFF 서버에 연결할 수 없습니다. CORS 설정을 확인하거나 서버가 실행 중인지 확인해주세요.');
+    }
+    
+    throw error; // 에러를 다시 던져서 상위에서 처리할 수 있도록 함
+  }
+};
+
+// BFF에서 로그인 상태 확인
+export const checkAuthStatus = async () => {
+  try {
+    const response = await fetch('http://localhost:9091/api/auth/status', {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 500) {
+        console.error('BFF 서버 내부 오류 (500)');
+        throw new Error('BFF 서버 내부 오류가 발생했습니다.');
+      }
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    const isAuthenticated = data.authenticated === true;
+    
+    return isAuthenticated;
+  } catch (error) {
+    console.error('인증 상태 확인 실패:', error);
+    
+    // CORS 에러인 경우 특별한 처리
+    if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+      throw new Error('BFF 서버에 연결할 수 없습니다. CORS 설정을 확인하거나 서버가 실행 중인지 확인해주세요.');
+    }
+    
+    throw error; // 에러를 다시 던져서 상위에서 처리할 수 있도록 함
+  }
+};
+
+// OAuth2 로그아웃 (서버에서 세션 관리)
+export const revokeToken = async () => {
+  try {
+    // 서버에 로그아웃 요청 (쿠키로 세션 관리)
+    await fetch('http://localhost:9091/api/auth/logout', {
+      method: 'POST',
+      mode: 'cors', // CORS 모드 명시적 설정
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include'
+    });
+    
+    // 로컬 토큰 정리
+    window.oauth2Tokens = null;
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Logout failed:', error);
+    // 로그아웃 실패해도 로컬에서는 정리
+    window.oauth2Tokens = null;
+    return { success: false, error: error.message };
+  }
 };

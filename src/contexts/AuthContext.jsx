@@ -94,6 +94,7 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(true);
     try {
       setUser(userData);
+      console.log('Login successful:', userData);
       localStorage.setItem('user', JSON.stringify(userData));
     } catch (error) {
       console.error('Login failed:', error);
@@ -105,15 +106,27 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      // OAuth2 토큰 취소
-      await revokeToken();
+      // 서버에 로그아웃 요청 (서버에서 세션 정리)
+      const result = await revokeToken();
+      
+      if (result.success) {
+        // 서버에서 로그아웃 성공 시에만 로컬 상태 정리
+        console.log('서버 로그아웃 성공:', result.message);
+        setUser(null);
+        localStorage.removeItem('user');
+        setAuthError(null);
+      } else {
+        // 서버 로그아웃 실패 시 로컬 상태 유지 (사용자 세션 유지)
+        console.error('서버 로그아웃 실패:', result.error);
+        setAuthError(result.error || '로그아웃에 실패했습니다. 다시 시도해주세요.');
+        // 사용자 정보는 유지 (setUser, localStorage 제거하지 않음)
+      }
     } catch (error) {
-      console.error('Token revocation failed:', error);
-      // 토큰 취소 실패해도 클라이언트에서는 로그아웃 처리
-    } finally {
-      // 클라이언트 상태 정리
-      setUser(null);
-      localStorage.removeItem('user');
+      console.error('Logout failed:', error);
+      // 네트워크 오류 등으로 서버 요청 자체가 실패한 경우
+      // 로컬 상태는 유지하고 에러 메시지만 표시
+      setAuthError(error.message || '로그아웃 중 오류가 발생했습니다. 다시 시도해주세요.');
+      // 사용자 정보는 유지 (setUser, localStorage 제거하지 않음)
     }
   };
 

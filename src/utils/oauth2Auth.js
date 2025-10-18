@@ -135,7 +135,7 @@ export const checkAuthStatus = async () => {
 export const revokeToken = async () => {
   try {
     // 서버에 로그아웃 요청 (쿠키로 세션 관리)
-    await fetch('http://localhost:9091/api/auth/logout', {
+    const response = await fetch('http://localhost:9091/api/auth/logout', {
       method: 'POST',
       mode: 'cors', // CORS 모드 명시적 설정
       headers: {
@@ -144,8 +144,19 @@ export const revokeToken = async () => {
       credentials: 'include'
     });
     
+    if (!response.ok) {
+      throw new Error(`Logout failed with status: ${response.status}`);
+    }
     
-    return { success: true };
+    // 서버에서 JSON 응답 반환
+    const result = await response.json();
+    console.log('서버 로그아웃 응답:', result);
+    
+    return {
+      success: result.success || false,
+      message: result.message,
+      error: result.error
+    };
   } catch (error) {
     console.error('Logout failed:', error);
     return { success: false, error: error.message };

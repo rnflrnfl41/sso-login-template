@@ -144,14 +144,10 @@ export const revokeToken = async () => {
       credentials: 'include'
     });
     
-    // 로컬 토큰 정리
-    window.oauth2Tokens = null;
     
     return { success: true };
   } catch (error) {
     console.error('Logout failed:', error);
-    // 로그아웃 실패해도 로컬에서는 정리
-    window.oauth2Tokens = null;
     return { success: false, error: error.message };
   }
 };

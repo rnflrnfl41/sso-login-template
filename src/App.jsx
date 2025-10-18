@@ -48,7 +48,9 @@ function AppContent() {
           path="/login" 
           element={
             user ? <Navigate to="/dashboard" replace /> : 
-            <LoginForm />
+            <div className="login-page">
+              <LoginForm />
+            </div>
           } 
         />
         <Route 

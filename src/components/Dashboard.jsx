@@ -14,6 +14,19 @@ const Dashboard = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // 시간 포맷팅 함수
+  const formatTime = (date) => {
+    return date.toLocaleString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+  };
+
   const handleLogout = () => {
     logout();
   };
@@ -23,23 +36,28 @@ const Dashboard = () => {
       <header className="dashboard-header">
         <div className="header-content">
           <h1>대시보드</h1>
-          <div className="user-info">
-            <div className="user-avatar">
-              {user.avatar ? (
-                <img src={user.avatar} alt="사용자 아바타" />
-              ) : (
-                <div className="avatar-placeholder">
-                  {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                </div>
-              )}
+          <div className="header-right">
+            <div className="time-display">
+              <div className="time-value">{formatTime(currentTime)}</div>
             </div>
-            <div className="user-details">
-              <span className="user-name">{user.name || '사용자'}</span>
-              <span className="user-email">{user.email}</span>
+            <div className="user-info">
+              <div className="user-avatar">
+                {user.avatar ? (
+                  <img src={user.avatar} alt="사용자 아바타" />
+                ) : (
+                  <div className="avatar-placeholder">
+                    {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                )}
+              </div>
+              <div className="user-details">
+                <span className="user-name">{user.name || '사용자'}</span>
+                <span className="user-email">{user.email}</span>
+              </div>
+              <button className="logout-button" onClick={handleLogout}>
+                로그아웃
+              </button>
             </div>
-            <button className="logout-button" onClick={handleLogout}>
-              로그아웃
-            </button>
           </div>
         </div>
       </header>
@@ -48,9 +66,6 @@ const Dashboard = () => {
         <div className="welcome-section">
           <h2>환영합니다, {user.name || '사용자'}님!</h2>
           <p>SSO 로그인이 성공적으로 완료되었습니다.</p>
-          <div className="time-display">
-            현재 시간: {currentTime.toLocaleString('ko-KR')}
-          </div>
         </div>
 
         <div className="stats-grid">

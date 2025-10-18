@@ -43,7 +43,7 @@ export const initiateOAuth2Login = async () => {
 // BFF에서 사용자 정보 가져오기 (세션 확인)
 export const getCurrentUser = async () => {
   try {
-    const response = await fetch('http://localhost:9091/api/user/me', {
+    const response = await fetch('http://localhost:9091/api/auth/user/me', {
       method: 'GET',
       credentials: 'include', // 쿠키로 세션 관리
       mode: 'cors', // CORS 모드 명시적 설정
@@ -144,14 +144,10 @@ export const revokeToken = async () => {
       credentials: 'include'
     });
     
-    // 로컬 토큰 정리
-    window.oauth2Tokens = null;
     
     return { success: true };
   } catch (error) {
     console.error('Logout failed:', error);
-    // 로그아웃 실패해도 로컬에서는 정리
-    window.oauth2Tokens = null;
     return { success: false, error: error.message };
   }
 };

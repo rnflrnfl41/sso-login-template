@@ -19,20 +19,18 @@ const LoginForm = () => {
 
   return (
     <div className="login-container">
-      <div className="login-card">
-        <div className="login-header">
-          <h2>로그인</h2>
-          <p>계정에 로그인하세요</p>
-        </div>
-
-        <button 
-          className="login-button"
-          onClick={handleLogin}
-          disabled={isLoading}
-        >
-          {isLoading ? '로그인 중...' : '로그인하러가기'}
-        </button>
+      <div className="login-header">
+        <h2>로그인</h2>
+        <p>계정에 로그인하세요</p>
       </div>
+
+      <button 
+        className="login-button"
+        onClick={handleLogin}
+        disabled={isLoading}
+      >
+        {isLoading ? '로그인 중...' : '로그인하러가기'}
+      </button>
     </div>
   );
 };

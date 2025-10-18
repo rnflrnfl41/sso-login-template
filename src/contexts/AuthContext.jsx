@@ -14,30 +14,72 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState(null);
 
   useEffect(() => {
-    // 페이지 로드 시 BFF에서 인증 상태 확인
+    // 페이지 로드 시 URL 파라미터와 BFF 인증 상태 확인
     const checkAuthStatusOnLoad = async () => {
       try {
-        // BFF에서 로그인 상태 확인
-        const isAuthenticated = await checkAuthStatus();
+        // URL 파라미터 확인
+        const urlParams = new URLSearchParams(window.location.search);
+        const loginStatus = urlParams.get('login');
+        const error = urlParams.get('error');
         
-        if (isAuthenticated) {
+        console.log('URL 파라미터:', { loginStatus, error });
+        
+        // BFF에서 에러가 발생한 경우
+        if (loginStatus === 'failed' && error) {
+          console.error('BFF 로그인 실패:', error);
+          setUser(null);
+          setAuthError(decodeURIComponent(error)); // URL 디코딩
+          localStorage.removeItem('user');
+          // URL 파라미터 제거
+          window.history.replaceState({}, document.title, window.location.pathname);
+          return;
+        }
+        
+        // BFF에서 리다이렉트된 경우 (login=success 또는 login=already)
+        if (loginStatus === 'success' || loginStatus === 'already') {
+          console.log('BFF 리다이렉트 플로우 감지:', loginStatus);
+          
           // BFF에서 사용자 정보 가져오기
           const userData = await getCurrentUser();
           if (userData) {
             setUser(userData);
+            setAuthError(null); // 성공 시 에러 상태 초기화
             localStorage.setItem('user', JSON.stringify(userData));
+            
+            // URL 파라미터 제거 (새로고침 시 중복 처리 방지)
+            window.history.replaceState({}, document.title, window.location.pathname);
+          } else {
+            console.error('BFF에서 사용자 정보를 가져올 수 없습니다');
+            setUser(null);
+            setAuthError('사용자 정보를 가져올 수 없습니다.');
+            localStorage.removeItem('user');
           }
         } else {
-          // 인증되지 않은 경우 로컬 상태 정리
-          setUser(null);
-          localStorage.removeItem('user');
+          // 일반적인 경우: BFF에서 인증 상태 확인
+          const isAuthenticated = await checkAuthStatus();
+          
+          if (isAuthenticated) {
+            // BFF에서 사용자 정보 가져오기
+            const userData = await getCurrentUser();
+            if (userData) {
+              setUser(userData);
+              setAuthError(null); // 성공 시 에러 상태 초기화
+              localStorage.setItem('user', JSON.stringify(userData));
+            }
+          } else {
+            // 인증되지 않은 경우 로컬 상태 정리
+            setUser(null);
+            localStorage.removeItem('user');
+          }
         }
       } catch (error) {
         console.error('Auth check failed:', error);
         // 오류 시 정리
         setUser(null);
+        setAuthError(error.message || '인증 확인 중 오류가 발생했습니다.');
         localStorage.removeItem('user');
       } finally {
         setIsLoading(false);
@@ -93,10 +135,12 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     isLoading,
+    authError,
     login,
     logout,
     apiRequest,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
+    clearError: () => setAuthError(null)
   };
 
   return (

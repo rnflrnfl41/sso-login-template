@@ -46,7 +46,6 @@ export const getCurrentUser = async () => {
     const response = await fetch('http://localhost:9091/api/auth/user/me', {
       method: 'GET',
       credentials: 'include', // 쿠키로 세션 관리
-      mode: 'cors', // CORS 모드 명시적 설정
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
@@ -73,16 +72,9 @@ export const getCurrentUser = async () => {
     
     const userData = await response.json();
     console.log('사용자 정보 가져오기 성공:', userData);
-    
-    // 서버에서 user 객체를 직접 반환하는 경우와 래핑된 응답을 모두 처리
-    if (userData.user) {
-      return userData.user; // { user: {...} } 형태인 경우
-    } else if (userData.sub || userData.id) {
-      return userData; // 사용자 정보가 직접 반환된 경우
-    } else {
-      console.warn('예상치 못한 사용자 데이터 형식:', userData);
-      return userData;
-    }
+
+    return userData.user;
+
   } catch (error) {
     console.error('사용자 정보 가져오기 실패:', error);
     

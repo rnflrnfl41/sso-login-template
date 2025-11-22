@@ -42,8 +42,8 @@ const Dashboard = () => {
             </div>
             <div className="user-info">
               <div className="user-avatar">
-                {user.avatar ? (
-                  <img src={user.avatar} alt="사용자 아바타" />
+                {user.profileImg ? (
+                  <img src={user.profileImg} alt="사용자 아바타" />
                 ) : (
                   <div className="avatar-placeholder">
                     {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
@@ -72,9 +72,20 @@ const Dashboard = () => {
           <div className="stat-card">
             <div className="stat-icon">👤</div>
             <div className="stat-content">
-              <h3>사용자 정보</h3>
-              <p>이메일: {user.email}</p>
-              <p>로그인 방식: {user.loginMethod || '일반 로그인'}</p>
+              <h3>기본 정보</h3>
+              <p>이름: {user.name || '-'}</p>
+              <p>이메일: {user.email || '-'}</p>
+              <p>로그인 ID: {user.loginId || '-'}</p>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-icon">🆔</div>
+            <div className="stat-content">
+              <h3>계정 정보</h3>
+              <p>사용자 ID: {user.sub || '-'}</p>
+              <p>전화번호: {user.phone || '-'}</p>
+              <p>역할: {user.role || '-'}</p>
             </div>
           </div>
 
@@ -84,15 +95,6 @@ const Dashboard = () => {
               <h3>보안 상태</h3>
               <p>인증 완료</p>
               <p>세션 활성</p>
-            </div>
-          </div>
-
-          <div className="stat-card">
-            <div className="stat-icon">⚡</div>
-            <div className="stat-content">
-              <h3>시스템 상태</h3>
-              <p>정상 작동</p>
-              <p>연결 안정</p>
             </div>
           </div>
 

@@ -5,7 +5,8 @@ import './Dashboard.css';
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [timeRemaining, setTimeRemaining] = useState(null);
+  const [accessTimeRemaining, setAccessTimeRemaining] = useState(null);
+  const [refreshTimeRemaining, setRefreshTimeRemaining] = useState(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -15,53 +16,77 @@ const Dashboard = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // 시간 계산 헬퍼 함수
+  const calculateTimeRemaining = (expTime) => {
+    const now = new Date().getTime();
+    // expTime이 초 단위인지 밀리초 단위인지 확인
+    // 일반적으로 Unix timestamp는 초 단위이므로 1000을 곱함
+    const expirationTime = expTime > 1000000000000 
+      ? expTime 
+      : expTime * 1000;
+    
+    const remaining = expirationTime - now;
+    
+    if (remaining <= 0) {
+      return { expired: true, text: '만료됨' };
+    }
+
+    const hours = Math.floor(remaining / (1000 * 60 * 60));
+    const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+
+    return {
+      expired: false,
+      hours,
+      minutes,
+      seconds,
+      text: hours > 0 
+        ? `${hours}시간 ${minutes}분 ${seconds}초`
+        : minutes > 0
+        ? `${minutes}분 ${seconds}초`
+        : `${seconds}초`
+    };
+  };
+
   // AccessToken 만료 시간 계산
   useEffect(() => {
     if (!user?.accessExp) {
-      setTimeRemaining(null);
+      setAccessTimeRemaining(null);
       return;
     }
 
-    const calculateTimeRemaining = () => {
-      const now = new Date().getTime();
-      // accessExp가 초 단위인지 밀리초 단위인지 확인
-      // 일반적으로 Unix timestamp는 초 단위이므로 1000을 곱함
-      const expTime = user.accessExp > 1000000000000 
-        ? user.accessExp 
-        : user.accessExp * 1000;
-      
-      const remaining = expTime - now;
-      
-      if (remaining <= 0) {
-        setTimeRemaining({ expired: true, text: '만료됨' });
-        return;
-      }
-
-      const hours = Math.floor(remaining / (1000 * 60 * 60));
-      const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
-
-      setTimeRemaining({
-        expired: false,
-        hours,
-        minutes,
-        seconds,
-        text: hours > 0 
-          ? `${hours}시간 ${minutes}분 ${seconds}초`
-          : minutes > 0
-          ? `${minutes}분 ${seconds}초`
-          : `${seconds}초`
-      });
+    const updateAccessTime = () => {
+      setAccessTimeRemaining(calculateTimeRemaining(user.accessExp));
     };
 
     // 즉시 계산
-    calculateTimeRemaining();
+    updateAccessTime();
 
     // 1초마다 업데이트
-    const timer = setInterval(calculateTimeRemaining, 1000);
+    const timer = setInterval(updateAccessTime, 1000);
 
     return () => clearInterval(timer);
   }, [user?.accessExp]);
+
+  // RefreshToken 만료 시간 계산
+  useEffect(() => {
+    if (!user?.refreshExp) {
+      setRefreshTimeRemaining(null);
+      return;
+    }
+
+    const updateRefreshTime = () => {
+      setRefreshTimeRemaining(calculateTimeRemaining(user.refreshExp));
+    };
+
+    // 즉시 계산
+    updateRefreshTime();
+
+    // 1초마다 업데이트
+    const timer = setInterval(updateRefreshTime, 1000);
+
+    return () => clearInterval(timer);
+  }, [user?.refreshExp]);
 
   // 시간 포맷팅 함수
   const formatTime = (date) => {
@@ -144,9 +169,14 @@ const Dashboard = () => {
               <h3>보안 상태</h3>
               <p>인증 완료</p>
               <p>세션 활성</p>
-              {timeRemaining && (
-                <p className={timeRemaining.expired ? 'token-expired' : 'token-remaining'}>
-                  토큰 만료까지: {timeRemaining.text}
+              {accessTimeRemaining && (
+                <p className={accessTimeRemaining.expired ? 'token-expired' : 'token-remaining'}>
+                  AccessToken 만료까지: {accessTimeRemaining.text}
+                </p>
+              )}
+              {refreshTimeRemaining && (
+                <p className={refreshTimeRemaining.expired ? 'token-expired' : 'token-remaining'}>
+                  RefreshToken 만료까지: {refreshTimeRemaining.text}
                 </p>
               )}
             </div>

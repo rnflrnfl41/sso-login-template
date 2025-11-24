@@ -321,31 +321,17 @@
 }
 
 .token-remaining {
-  color: #48bb78 !important;
-  font-weight: 600 !important;
-  font-size: var(--font-size-sm) !important;
-  margin-top: var(--spacing-2) !important;
-  padding-top: var(--spacing-2) !important;
-  border-top: 1px solid var(--border-light);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  margin: var(--spacing-1) 0;
+  line-height: 1.4;
 }
 
 .token-expired {
-  color: #e53e3e !important;
-  font-weight: 600 !important;
-  font-size: var(--font-size-sm) !important;
-  margin-top: var(--spacing-2) !important;
-  padding-top: var(--spacing-2) !important;
-  border-top: 1px solid var(--border-light);
-  animation: pulse 1s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
+  color: #e53e3e;
+  font-size: var(--font-size-sm);
+  margin: var(--spacing-1) 0;
+  line-height: 1.4;
 }
 
 .action-buttons {

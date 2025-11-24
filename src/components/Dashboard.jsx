@@ -101,6 +101,32 @@ const Dashboard = () => {
     });
   };
 
+  // 전화번호 포맷팅 함수
+  const formatPhoneNumber = (phone) => {
+    if (!phone) return '-';
+    
+    // 숫자만 추출
+    const numbers = phone.replace(/\D/g, '');
+    
+    // 길이에 따라 포맷팅
+    if (numbers.length === 11) {
+      // 휴대폰 번호: 010-1234-5678
+      return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7)}`;
+    } else if (numbers.length === 10) {
+      // 지역번호가 2자리: 02-1234-5678
+      if (numbers.startsWith('02')) {
+        return `${numbers.slice(0, 2)}-${numbers.slice(2, 6)}-${numbers.slice(6)}`;
+      } else {
+        // 지역번호가 3자리: 031-123-4567
+        return `${numbers.slice(0, 3)}-${numbers.slice(3, 6)}-${numbers.slice(6)}`;
+      }
+    } else {
+      // 형식이 맞지 않으면 원본 반환
+      return phone;
+    }
+  };
+
+
   const handleLogout = () => {
     logout();
   };
@@ -158,17 +184,16 @@ const Dashboard = () => {
             <div className="stat-content">
               <h3>계정 정보</h3>
               <p>사용자 ID: {user.sub || '-'}</p>
-              <p>전화번호: {user.phone || '-'}</p>
+              <p>전화번호: {formatPhoneNumber(user.phone)}</p>
               <p>역할: {user.role || '-'}</p>
+              <p>로그인 방식: {user.provider || '일반 로그인'}</p>
             </div>
           </div>
 
           <div className="stat-card">
             <div className="stat-icon">🔐</div>
             <div className="stat-content">
-              <h3>보안 상태</h3>
-              <p>인증 완료</p>
-              <p>세션 활성</p>
+              <h3>토큰 상태</h3>
               {accessTimeRemaining && (
                 <p className={accessTimeRemaining.expired ? 'token-expired' : 'token-remaining'}>
                   AccessToken 만료까지: {accessTimeRemaining.text}
@@ -186,7 +211,17 @@ const Dashboard = () => {
             <div className="stat-icon">📊</div>
             <div className="stat-content">
               <h3>활동 로그</h3>
-              <p>로그인 시간: {new Date().toLocaleTimeString('ko-KR')}</p>
+              {user?.loginTime && (
+                <p>로그인 시간: {new Date(user.loginTime).toLocaleString('ko-KR', {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                  hour12: false
+                })}</p>
+              )}
               <p>상태: 온라인</p>
             </div>
           </div>

@@ -320,6 +320,20 @@
   line-height: 1.4;
 }
 
+.token-remaining {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  margin: var(--spacing-1) 0;
+  line-height: 1.4;
+}
+
+.token-expired {
+  color: #e53e3e;
+  font-size: var(--font-size-sm);
+  margin: var(--spacing-1) 0;
+  line-height: 1.4;
+}
+
 .action-buttons {
   display: flex;
   gap: var(--spacing-4);

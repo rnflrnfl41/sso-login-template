@@ -45,9 +45,14 @@ export const AuthProvider = ({ children }) => {
           // BFF에서 사용자 정보 가져오기
           const userData = await getCurrentUser();
           if (userData) {
-            setUser(userData);
+            // 로그인 시간 추가 (이미 있으면 유지, 없으면 현재 시간 저장)
+            const userWithLoginTime = {
+              ...userData,
+              loginTime: userData.loginTime || new Date().toISOString()
+            };
+            setUser(userWithLoginTime);
             setAuthError(null); // 성공 시 에러 상태 초기화
-            localStorage.setItem('user', JSON.stringify(userData));
+            localStorage.setItem('user', JSON.stringify(userWithLoginTime));
             
             // URL 파라미터 제거 (새로고침 시 중복 처리 방지)
             window.history.replaceState({}, document.title, window.location.pathname);
@@ -65,9 +70,18 @@ export const AuthProvider = ({ children }) => {
             // BFF에서 사용자 정보 가져오기
             const userData = await getCurrentUser();
             if (userData) {
-              setUser(userData);
+              // localStorage에서 기존 로그인 시간 확인
+              const storedUser = localStorage.getItem('user');
+              const existingLoginTime = storedUser ? JSON.parse(storedUser).loginTime : null;
+              
+              // 로그인 시간 추가 (이미 있으면 유지, 없으면 현재 시간 저장)
+              const userWithLoginTime = {
+                ...userData,
+                loginTime: existingLoginTime || userData.loginTime || new Date().toISOString()
+              };
+              setUser(userWithLoginTime);
               setAuthError(null); // 성공 시 에러 상태 초기화
-              localStorage.setItem('user', JSON.stringify(userData));
+              localStorage.setItem('user', JSON.stringify(userWithLoginTime));
             }
           } else {
             // 인증되지 않은 경우 로컬 상태 정리

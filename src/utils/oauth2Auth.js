@@ -87,42 +87,6 @@ export const getCurrentUser = async () => {
   }
 };
 
-// BFF에서 로그인 상태 확인
-export const checkAuthStatus = async () => {
-  try {
-    const response = await fetch('http://localhost:9091/api/auth/status', {
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    if (!response.ok) {
-      if (response.status === 500) {
-        console.error('BFF 서버 내부 오류 (500)');
-        throw new Error('BFF 서버 내부 오류가 발생했습니다.');
-      }
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    const isAuthenticated = data.authenticated === true;
-    
-    return isAuthenticated;
-  } catch (error) {
-    console.error('인증 상태 확인 실패:', error);
-    
-    // CORS 에러인 경우 특별한 처리
-    if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-      throw new Error('BFF 서버에 연결할 수 없습니다. CORS 설정을 확인하거나 서버가 실행 중인지 확인해주세요.');
-    }
-    
-    throw error; // 에러를 다시 던져서 상위에서 처리할 수 있도록 함
-  }
-};
-
 // OAuth2 로그아웃 (서버에서 세션 관리)
 export const revokeToken = async () => {
   try {

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { getCurrentUser, checkAuthStatus, revokeToken } from '../utils/oauth2Auth';
+import { getCurrentUser, revokeToken } from '../utils/oauth2Auth';
 
 const AuthContext = createContext();
 
@@ -38,56 +38,31 @@ export const AuthProvider = ({ children }) => {
           return;
         }
         
-        // BFF에서 리다이렉트된 경우 (login=success 또는 login=already)
+        // BFF에서 리다이렉트된 경우 URL 파라미터 제거 (새로고침 시 중복 처리 방지)
         if (loginStatus === 'success' || loginStatus === 'already') {
           console.log('BFF 리다이렉트 플로우 감지:', loginStatus);
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        
+        // BFF에서 사용자 정보 가져오기 (인증 상태 확인 포함)
+        const userData = await getCurrentUser();
+        if (userData) {
+          // localStorage에서 기존 로그인 시간 확인
+          const storedUser = localStorage.getItem('user');
+          const existingLoginTime = storedUser ? JSON.parse(storedUser).loginTime : null;
           
-          // BFF에서 사용자 정보 가져오기
-          const userData = await getCurrentUser();
-          if (userData) {
-            // 로그인 시간 추가 (이미 있으면 유지, 없으면 현재 시간 저장)
-            const userWithLoginTime = {
-              ...userData,
-              loginTime: userData.loginTime || new Date().toISOString()
-            };
-            setUser(userWithLoginTime);
-            setAuthError(null); // 성공 시 에러 상태 초기화
-            localStorage.setItem('user', JSON.stringify(userWithLoginTime));
-            
-            // URL 파라미터 제거 (새로고침 시 중복 처리 방지)
-            window.history.replaceState({}, document.title, window.location.pathname);
-          } else {
-            console.error('BFF에서 사용자 정보를 가져올 수 없습니다');
-            setUser(null);
-            setAuthError('사용자 정보를 가져올 수 없습니다.');
-            localStorage.removeItem('user');
-          }
+          // 로그인 시간 추가 (이미 있으면 유지, 없으면 현재 시간 저장)
+          const userWithLoginTime = {
+            ...userData,
+            loginTime: existingLoginTime || userData.loginTime || new Date().toISOString()
+          };
+          setUser(userWithLoginTime);
+          setAuthError(null); // 성공 시 에러 상태 초기화
+          localStorage.setItem('user', JSON.stringify(userWithLoginTime));
         } else {
-          // 일반적인 경우: BFF에서 인증 상태 확인
-          const isAuthenticated = await checkAuthStatus();
-          
-          if (isAuthenticated) {
-            // BFF에서 사용자 정보 가져오기
-            const userData = await getCurrentUser();
-            if (userData) {
-              // localStorage에서 기존 로그인 시간 확인
-              const storedUser = localStorage.getItem('user');
-              const existingLoginTime = storedUser ? JSON.parse(storedUser).loginTime : null;
-              
-              // 로그인 시간 추가 (이미 있으면 유지, 없으면 현재 시간 저장)
-              const userWithLoginTime = {
-                ...userData,
-                loginTime: existingLoginTime || userData.loginTime || new Date().toISOString()
-              };
-              setUser(userWithLoginTime);
-              setAuthError(null); // 성공 시 에러 상태 초기화
-              localStorage.setItem('user', JSON.stringify(userWithLoginTime));
-            }
-          } else {
-            // 인증되지 않은 경우 로컬 상태 정리
-            setUser(null);
-            localStorage.removeItem('user');
-          }
+          // 인증되지 않은 경우 로컬 상태 정리
+          setUser(null);
+          localStorage.removeItem('user');
         }
       } catch (error) {
         console.error('Auth check failed:', error);
